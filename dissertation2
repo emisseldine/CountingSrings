@@ -1,0 +1,515 @@
+SRing0 := function(p,n);
+
+// Given a cyclic group G of order p^n 
+// returns the trivial S-ring over G.
+
+	 return {{0}, {x : x in [1..p^n-1]} };
+end function;
+
+
+SymmetricSRing := function(p,n);
+
+// Given a cyclic group G of order p^n 
+// returns the Symmetric S-ring over G.
+
+	order := p^n;
+	return { {x, (-x) mod order} : x in [0..order-1] };
+end function; 
+
+
+IsSset := function(H, sring);
+
+// Given an S-ring over a group G and a subset H of G,
+// returns if true if the sum of H is an element of sring.
+
+	S := &join [C : C in sring | #(C meet H) ne 0];
+
+	return S eq H;
+end function;
+
+
+
+IsSRing := function(sring, p, n);
+
+// Given a partition of a cyclic group of order p^n,
+// returns true if the partition affords an S-ring.
+
+	order := p^n;
+
+	first := {0} in sring;
+
+	second := &and [ &join [{(-x) mod order} : x in C] in sring : C in sring];
+
+
+	third := true;
+	for C in sring do
+		for D in sring do
+			S := &join [{(c + d) mod order : d in D} : c in C];
+			third and:= IsSset(S,sring); 
+		end for;
+	end for;
+	
+	return first and second and third;
+end function;
+
+
+UnitClass := function(sring);
+
+// Given a pre-S-ring over G,
+// Returns the unit class of S-ring.
+
+	return {C : C in sring | 0 in C};
+end function;
+
+
+RemoveUnitClass := function(sring);
+
+// Given a pre-S-ring over G,
+// returns the partition with the unit class removed.
+
+	return sring diff UnitClass(sring);
+end function; 
+
+
+IncludeSRing := function(sring, p, k, n)
+
+// Given an S-ring over Z_(p^k) and an integer n larger than k,
+// returns sring as an immersed S-ring of Z_(p^n).
+	
+	S := AssociativeArray(sring);
+
+	for C in sring do 
+		S[C] := {a*p^(n-k) : a in C};
+	end for;
+
+	return {S[C] : C in sring};
+end function;
+
+
+Layer := function(p, k, n);
+
+// Given a cyclic of order p^n and a positive integer k less than n,
+// returns the unique subgroup of order p^k.
+	
+	return {x*p^(n-k) : x in  [0..p^k-1]};
+end function;
+
+
+IsCoset := function(C, p, n);
+
+// Given a subset of a cyclic group of order p^n,
+// returns true if the subset is a coset of the group.
+
+	if (#C) mod p eq 0 then 
+		order := p^n;	
+		H := Layer(p,1,n);
+		bool := true;
+		
+		for x in C do
+			bool and:= {(x + h) mod order : h in H} subset C;
+		end for;
+		return bool;
+
+	else 
+		return false;
+	end if;
+end function; 
+
+
+ImmersedSRing := function(sring, p, n, k);
+
+// Given an S-ring over a cyclic group of order p^n and a subgroup K of order p^k,
+// returns the partition of G containing only classes which intersect K.
+	
+	H := Layer(p,k,n);
+	return {C : C in sring | H meet C ne {} };
+end function;
+
+
+Nucleus := function(sring, p, n);
+
+// Given an S-ring over a cyclic group of order p^n,
+// returns the nucleus of the S-ring
+
+	order := p^n;
+	NotCosets := {};
+	for C in sring do
+		if not IsCoset(C,p,n) then
+			NotCosets join:= C;
+		end if;
+	end for;
+
+	m := Min(NotCosets diff {0});
+	//g := Gcd(m, order); 
+	k := Integers()!Log(p,m);	
+	return ImmersedSRing(sring, p, n, n-k);
+end function;
+
+
+
+RemoveSubgroup := function(sring, p, n, k);
+
+// Given an S-ring over a cyclic group G of order p^n and a subgroup K of order p^k,
+// returns the partition of G for which every class containing an element of K is removed.
+
+	return sring diff ImmersedSRing(sring,p, n, k);
+end function; 
+
+
+InflatedSRing := function(sring, p, n);
+
+// Given an S-ring over Z_(p^n),
+// returns the inflated S-ring over Z_(p^(n+1)).
+
+	H := Layer(p,1,n+1);		
+	return {&join { {x+h : h in H} : x in C} : C in sring};
+end function; 
+
+
+
+MultiInflatedSRing := function(sring, p, n, r);
+
+// Iterates InflatedSRing r-times.
+
+
+	for i := 1 to r do
+		sring := InflatedSRing(sring, p, n+i-1);
+	end for;
+	return sring;
+end function;
+
+
+DeflatedSRing := function(sring, p, n);
+
+// Given an immersed S-ring over Z_(p^n),
+// returns the deflated S-ring over Z_(p^(n-1)).
+	
+	if #sring eq 2 
+		then return SRing0(p,n-1);
+	else
+		return { {x mod p^(n-1) : x in C} : C in sring};
+	end if;
+end function;
+	
+
+
+AutoClassCyc := function(x, r, n);
+
+// Given an integer x, a modulus, n, and an integer r,
+// returns the automorphism class of x with respect to the automorphism group <r> in the 
+// ambient cyclic group Z_n.
+
+	if Gcd(r,n) ne 1 
+		then return {};
+	else
+		C := {x};
+		b := (r*x) mod n;
+		
+		while b ne x do
+			C join:= {b};
+			b := (r*b) mod n;
+		end while;
+		
+		return C;
+	end if;
+end function;
+
+
+AutoClassCyc_internal := function(x, r, n);
+
+// An internal routine used in AutoSRingCyc. This function behaves exactly like AutoClassCyc
+// although the orginal gcd calculation is removed. Since AutoSRingCyc does this calculate,
+// it is redundant to do it again.
+
+	C := {x};
+	b := (r*x) mod n;
+		
+	while b ne x do
+		C join:= {b};
+		b := (r*b) mod n;
+	end while;
+		
+	return C;
+end function;
+
+
+AutoSRingCyc := function(r, p, k);
+
+// Given a finite cyclic group Z_{p^k} and an integer r,
+// returns the partition of G corresponding to the rational s-ring induced by <r> < Aut(G).
+
+	if Gcd(r,p) ne 1 
+		then return {};
+	else
+		n := p^k;
+		Sring := {{0}};
+		g := {m : m in [1..n-1]};
+
+		while #g ne 0 do
+			x := Random(g);
+			C := AutoClassCyc_internal(x,r,n);
+			Sring join:= {C};
+			g diff:= C;
+		end while;
+		
+		return Sring;
+	end if;
+end function;
+
+
+AutoSRingCyc_internal := function(r,p,k);
+
+// An internal routine used in RationalSRingsPrime and TopRationalSRingPrime. This function 
+// behaves exactly like AutoSRingsCyc although the orginal gcd calculation is removed. Since 
+// RationalSRingsPrime and TopRationalSRingsPrime only considers relatively prime integers, 
+// this gcd check is superfluous. 
+
+	n := p^k;
+	Sring := {{0}};
+	g := {m : m in [1..n-1]};
+
+	while #g ne 0 do
+		x := Random(g);
+		C := AutoClassCyc_internal(x,r,n);
+		Sring join:= {C};
+		g diff:= C;
+	end while;
+		
+	return Sring;
+end function;
+
+/////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////
+
+
+RationalSRingsPrime:= function(p,n);
+
+// Given a finite cyclic group G of order p^n,
+// returns all the partitions of G which correspond to rational s-rings.
+// Since the automorphism group of a cyclic group of odd prime power order is cyclic itself,
+// a primitive root exists, and we use it to speed up the calculations. 
+
+	SRings := {};
+	order := p^n;
+
+	if p eq 2 then
+		SRings := { {{x} : x in [0..order-1]} };
+		return SRings;
+	else	
+		a := PrimitiveRoot(order);			// a generates Aut(G)
+		f := order - p^(n-1);                           // EulerPhi(p^n);
+	
+		for d in Divisors(f) do
+			SRings join:= {AutoSRingCyc_internal((a^d) mod order,p,n)};
+		end for;
+
+		return SRings;
+	end if;
+end function;
+
+
+TopRationalSRingsPrime := function(p,n);
+
+// Given a finite cyclic group G of order p^n,
+// returns all the partitions of G which correspond to rational s-rings which are wedge-
+// indecomposable.
+
+	SRings := {}; 
+	order := p^n;
+
+	if p eq 2 then
+		SRings join:= { { {x} : x in [0..order-1]} };
+		if n gt 2 then 
+			SRings join:= { SymmetricSRing(p,n) };
+			SRings join:= {AutoSRingCyc_internal( (p^(n-1)-1) mod order, p,n)};
+		end if;
+		return SRings;
+	else
+		q := p^(n-1);      
+		f := order - q;				// EulerPhi(p^n);
+		a := PrimitiveRoot(p^n);		// a generates Aut(G)
+		
+		for d in Divisors(p-1) do
+			SRings join:= {AutoSRingCyc_internal(a^(q*d) mod order, p,n)};
+		end for;					
+							
+		return SRings;
+	end if;
+end function;
+
+
+WedgeProduct := function(p, nucleus, h, cloud, k);
+
+// Given two S-rings, nucleus and cloud, over cyclic groups, Z_(p^h) and Z_(p^k), respectively,
+// returns the wedge product (S wedge T) and the cyclic group Z_(p^(h+k)). 
+	
+	g := h+k;
+	
+	nucleus := IncludeSRing(nucleus, p, h, g);
+	R := MultiInflatedSRing(cloud, p, k, h);
+	cloud := RemoveUnitClass(R);
+
+	return nucleus join cloud;
+end function; 
+
+
+IsWedgePossible := function(p, nucleus, h, cloud, k, g);
+
+// Given an S-ring nucleus over H=Z_(p^h) and an S-ring Cloud over K=Z_(p^k),
+// returns true if the semi-wedge product is possible over G = Z_(p^n).
+// 1 < L < H < G, with L = G/K.
+
+	L := Layer(p, g-k, g);
+	N := IncludeSRing(nucleus, p, h, g);
+
+	if not IsSset(L,N)
+
+	then 
+		return false;
+	
+	else 
+		QH := Layer(p, h-1, k);
+
+		if not IsSset(QH,cloud) 
+
+		then 
+			return false;
+		
+		else
+			DN := IncludeSRing(DeflatedSRing(nucleus, p, h),p, h-1, k);
+			IC := ImmersedSRing(cloud, p, k, h-1);
+			
+			return IC eq DN;
+		end if;
+	
+	end if;
+end function;
+
+
+TrivialWedgeProducts := function(p, h, srings, k);
+
+// Given a cyclic group H=Z_(p^h) and a set of S-rings over some cyclic group K=Z_(p^k),
+// returns all wedge products over G=Z_(p^(h+k)) with nucleus the trivial S-ring over H and 
+//clouds from srings.
+
+	trivial := SRing0(p,h);
+	return {WedgeProduct(p,trivial,h, cloud,k) : cloud in srings};
+end function;	
+
+
+SemiWedgeProduct := function(p, nucleus, h, cloud, k, g);
+
+// Given cyclic subgroups 1 < L < H < G, each cyclic p-groups and L = G/K, 
+// and given S-rings nucleus and cloud over H and G/K, respectively,
+// and H, K, and G have orders p^h, p^k, and p^g, respectively,
+// returns the semi-wedge product (S wedge T). 
+
+	nucleus := IncludeSRing(nucleus, p, h, g);
+
+	R := MultiInflatedSRing(cloud, p, k, g-k);
+	cloud := RemoveSubgroup(R, p, g, h);
+
+	return nucleus join cloud;
+end function; 
+
+
+SemiWedgeProducts := function(p, sring, h, srings, k, g);
+
+// Given cyclic subgroups 1 < L < H < G, each cyclic p-groups and L = G/K, 
+// and given an S-ring over H and a set of S-rings over G/K, 
+// and H, K, and G have orders p^h, p^k, and p^g, respectively,
+// returns all semiwedge products over G with nucleus sring and clouds from srings.
+
+
+	SR := AssociativeArray(srings);
+
+	for cloud in srings do
+		if IsWedgePossible(p, sring,h,cloud,k,g) then
+			SR[cloud] := SemiWedgeProduct(p, sring, h, cloud, k, g);
+		else SR[cloud] := {};
+		end if;
+	end for;
+
+	return {SR[cloud] : cloud in srings} diff { {} };
+end function;	
+
+		
+forward SRings;
+SRings := function(p,n);
+
+// Given a cyclic group G of prime power order p^n,
+// returns the set of all S-ring over G.
+
+	if n eq 1
+		then return RationalSRingsPrime(p,1);
+
+	else
+			srings := {SRing0(p,n)};
+			srings join:= TopRationalSRingsPrime(p,n);		
+			
+			sr := [];
+			for i := 1 to n-1 do
+				sr[i] := SRings(p,i);
+			end for;
+
+			srQ := sr[n-1];			//cloud
+			
+
+			for i := 1 to n-1 do    
+				srN := TopRationalSRingsPrime(p,i); //nucleus
+				
+				for s in srN do
+					srings join:= SemiWedgeProducts(p,s, i, srQ, n-1, n); 
+				end for;
+				
+				srH := sr[n-i];
+				
+				srings  join:= TrivialWedgeProducts(p, i, srH, n-i);
+			end for;
+				
+				return srings;
+	end if;
+end function;
+
+
+SRingsMemory := function(p,n, SmallerSRings);
+
+// Given a cyclic group G of prime power order p^n,
+// returns the set of all S-ring over G.
+
+	if n eq 1
+		then return RationalSRingsPrime(p,1);
+
+	else
+			srings := {SRing0(p,n)};
+			srings join:= TopRationalSRingsPrime(p,n);		
+			srQ := SmallerSRings[n-1];			//cloud
+			
+
+			for i := 1 to n-1 do    
+				srN := TopRationalSRingsPrime(p,i); //nucleus
+				
+				for s in srN do
+					srings join:= SemiWedgeProducts(p,s, i, srQ, n-1, n); 
+				end for;
+
+				srH := SmallerSRings[n-i];
+				
+				srings  join:= TrivialWedgeProducts(p, i, srH, n-i);
+			end for;
+				
+				return srings;
+	end if;
+end function;
+
+			
+omega := function(S, srings, p, n);
+
+	sr := {};
+	for sring in srings do
+		if Nucleus(sring,p,n) eq S then
+			sr join:= {sring};
+		end if;
+	end for;
+	return sr;
+end function;	
