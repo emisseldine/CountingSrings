@@ -1,0 +1,162 @@
+for p:=5 to 100 do if IsPrime(p) then
+
+g<t>:=CyclicGroup(p);
+F:=RationalField();
+
+ga:=GroupAlgebra(F,g);psga:=PowerSet(ga);
+s1:=[];s2:=[];OldSRings123(g,~s1,~s2);
+s2:=Setseq(s2);
+sum:=&+{ga.i:i in {1..#g}};
+C:=CyclotomicField(p);
+ph:=map<{ga!t^i:i in {0..p-1}} -> C|{<ga!t^i,C.1^i>:i in {0..p-1}}>;
+
+al:={};sf:=Subfields(C);
+for ii:=1 to #s2 do
+pp:=Setseq(s2[ii]);
+ppp:={&+(ph(Setseq(x)))-0*#x: x in pp};
+SC:=sub<C|ppp>;
+for i:=1 to #sf do
+if SC ne F and IsIsomorphic(SC , sf[i][1]) then
+al:=al join {i};end if;
+end for;
+end for;
+p,#al eq #sf;
+end if;
+end for;
+
+
+//////////
+
+
+for p:=5 to 90 do if IsPrime(p) then
+
+g<t>:=CyclicGroup(p);
+F:=RationalField();
+
+ga:=GroupAlgebra(F,g);psga:=PowerSet(ga);
+s1:=[];s2:=[];OldSRings123(g,~s1,~s2);
+s2:=Setseq(s2);
+sum:=&+{ga.i:i in {1..#g}};
+C:=CyclotomicField(p);
+ph:=map<{ga!t^i:i in {0..p-1}} -> C|{<ga!t^i,C.1^i>:i in {0..p-1}}>;
+
+al:={};sf:=Subfields(C);
+for ii:=1 to #s2 do
+pp:=Setseq(s2[ii]);
+ppp:={&+(ph(Setseq(x)))-0*#x: x in pp};
+SC:=sub<C|ppp>;
+for i:=1 to #sf do
+if SC ne F and IsIsomorphic(SC , sf[i][1]) then
+// ii,i;
+al:=al join {i};end if;
+end for;
+end for;
+p,#al eq #sf;
+end if;
+end for;
+
+
+//
+
+
+for p:=5 to 90 do
+
+g<t>:=CyclicGroup(p);
+F:=RationalField();
+
+ga:=GroupAlgebra(F,g);psga:=PowerSet(ga);
+s2:=SRings1(g);
+s2:=Setseq(s2);
+sum:=&+{ga.i:i in {1..#g}};
+C:=CyclotomicField(p);
+ph:=map<{ga!t^i:i in {0..p-1}} -> C|{<ga!t^i,C.1^i>:i in {0..p-1}}>;
+
+al:={};sf:=Subfields(C);
+for ii:=1 to #s2 do
+pp:=Setseq(s2[ii]);
+ppp:={&+(ph(Setseq(x)))-0*#x: x in pp};
+SC:=sub<C|ppp>;
+for i:=1 to #sf do
+if SC ne F and IsIsomorphic(SC , sf[i][1]) then
+// ii,i;
+al:=al join {i};end if;
+end for;
+end for;
+p,#al eq #sf;
+
+end for;
+
+////////////////////////////
+
+p:=16;
+
+g<t>:=CyclicGroup(p);
+F:=RationalField();
+
+ga:=GroupAlgebra(F,g);psga:=PowerSet(ga);
+s1:=[];s2:=[];OldSRings123(g,~s1,~s2);
+s2:=Setseq(s2);
+sum:=&+{ga.i:i in {1..#g}};
+C:=CyclotomicField(p);
+ph:=map<{ga!t^i:i in {0..p-1}} -> C|{<ga!t^i,C.1^i>:i in {0..p-1}}>;
+
+al:={};sf:=Subfields(C);
+for ii:=1 to #s2 do
+pp:=Setseq(s2[ii]);
+ppp:={&+(ph(Setseq(x)))-0*#x: x in pp};
+SC:=sub<C|ppp>;
+for i:=1 to #sf do
+if SC ne F and IsIsomorphic(SC , sf[i][1]) then
+ii,i;
+al:=al join {i};end if;
+end for;
+end for;
+
+
+a := 1; p := 16; k := 7;
+for i := 1 to p do
+a;
+a := a*k mod p;
+end for; 
+
+
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+m := 8;
+p := 2;
+for k := 7 to m do 
+	g := CyclicGroup(p^k);
+	h := sub<g|g.1^(p^(k-1))>;
+	H := {{x*y : x in h} diff {Id(g)} : y in g} join {{Id(g)}};
+	KGmodH := SRingQAlg(H,g);
+	//H := {x : x in h | x ne Id(g)};
+	//H := {{Id(g)}, H};
+	//H diff:= {{}};
+
+	s1 := []; SR :=[];
+	OldSRings3(g, ~s1, ~SR);
+	sr := SetToArray(SR);
+
+	counter := 1;
+	for i := 1 to #sr do
+		if SRingQAlg(sr[i],g) subset KGmodH then counter +:= 1;
+		//CycSRingNice(sr[i],g);
+		end if;
+	end for;
+
+	//if k ge 2 then
+	//	"blarg";
+	//	h := sub<g|g.1^(p^(k-2))>;
+	//	H := {x : x in h | x ne Id(g)};
+	//	H := {{Id(g)}, H};
+	//	H diff:= {{}};
+	//	for i := 1 to #sr do
+	//		if #(sr[i] meet H) ge 2 then counter -:= 1;
+	//			CycSRingNice(sr[i],g);
+	//		end if;
+	//	end for;
+	//end if;
+	counter;
+
+end for;
